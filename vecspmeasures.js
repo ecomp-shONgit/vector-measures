@@ -128,19 +128,24 @@ function soergelM( v1, v2 ){
     return a/b;
 }
 
-function kulczynskiM( v1, v2 ){ 
+/*function kulczynskiM( v1, v2 ){ //binary purpose
     let l = v1.length; 
     if( l != v2.length ){
         return NaN;
     }
     let a = 0.0;
     let b = 0.0;
+    let c = 0.0
     for( let i = 0; i < l; i += 1 ){
-        a += Math.abs(v1[i]  - v2[i]);
-        b += Math.min(v1[i], v2[i]); 
+        //a += Math.abs(v1[i]  - v2[i]);
+        //b += Math.min(v1[i], v2[i]); 
+        a += Math.min(v1[i], v2[i]); 
+        b += v1[i];
+        c += v2[i];
     }
-    return a/b;
-}
+    //return a/b;
+    return 0.5*((a/b)+(a/c));
+}*/
 
 function lorentzianM( v1, v2 ){ 
     let l = v1.length; 
@@ -216,7 +221,7 @@ function motykaM( v1, v2 ){
     return b/a;
 }
 
-function kulczynskisM( v1, v2 ){ 
+/*function kulczynskisM( v1, v2 ){ // see above and binary data 
     let l = v1.length; 
     if( l != v2.length ){
         return NaN;
@@ -227,8 +232,8 @@ function kulczynskisM( v1, v2 ){
         a += Math.abs(v1[i]  - v2[i]);
         b += Math.min(v1[i], v2[i]); 
     }
-    return 1/(b/a);
-}
+    return (a/b);
+}*/
 
 function ruzickaM( v1, v2 ){ // 1- tanimotoM; minmax
     let l = v1.length; 
