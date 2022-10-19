@@ -23,6 +23,10 @@ function euclideanM( v1, v2 ){
 
 }
 
+function L2( x1, x2 ){
+    return euclideanM( x1, x2 );
+}
+
 function chebyshevM( v1, v2 ){
     let da = [];
     let l = v1.length; 
@@ -167,12 +171,28 @@ function intersectionM( v1, v2 ){
     }
     let d = 0.0;
     for( let i = 0; i < l; i += 1 ){
-        d += Math.abs(v1[i]  - v2[i]);
+        d += Math.min(v1[i], v2[i]);
     }
-    return d/2;
+    return d;
+}
+function intersectionZM( v1, v2 ){
+    let l = v1.length; 
+    if( l != v2.length ){
+        return NaN;
+    }
+    let d = 0.0;
+    let sv1 = 0.0;
+    let sv2 = 0.0;
+    for( let i = 0; i < l; i += 1 ){
+        d += Math.min(v1[i], v2[i]);
+        sv1 += v1[i];
+        sv2 += v2[i];
+    }
+    
+    return (1-(d/Math.min(sv1, sv2)));
 }
 
-function wavehedgesM( v1, v2 ){ 
+function wavehedgesM( v1, v2 ){ //wave edges; Edge waves from fluid dynamics ??? - introduced by Chan 2007 very bad, no sources but many modern replications
     let l = v1.length; 
     if( l != v2.length ){
         return NaN;
@@ -180,7 +200,7 @@ function wavehedgesM( v1, v2 ){
     let d = 0.0;
     for( let i = 0; i < l; i += 1 ){
         d += Math.abs(v1[i]  - v2[i])/Math.max(v1[i], v2[i]); 
-        //changed acording to: https://arxiv.org/pdf/1409.0923.pdf
+        //changed acording to: https://arxiv.org/pdf/1409.0923.pdf Hassant
         //d += 1-( ( 1 + mi ) / ( 1 + ma ) );
     }
     return d;
@@ -453,9 +473,9 @@ function divergenceM( v1, v2 ){
     }
     let d = 0.0;
     for(let i = 0; i < l; i += 1 ){
-        let z = v1[i] - v2[i];
-        let y = v1[i] + v2[i];
-        d += (z * z) / (y * y);
+        let z = 1+(v1[i] - v2[i]);//if part of the vector is zero
+        let y = 1+(v1[i] + v2[i]);
+        d += (z * z) / (y * y); 
         
     }
     return  d;
@@ -750,6 +770,10 @@ function wasserst1dM( d, h, magni ){
     
 }
 
+//
+function skinhorn(){
+
+}
 
 /*TESTSW*/
 function testmeasagainstAmeasure( m1, ms, ms2, a1, bs ){
@@ -792,7 +816,7 @@ function testvecmesure(){
     console.log("soerensenM: ", soerensenM(A,B));
     console.log("gowerM: ", gowerM(A,B, 100.0));
     console.log("soergelM: ", soergelM(A,B));
-    console.log("kulczynskiM: ", kulczynskiM(A,B));
+    //console.log("kulczynskiM: ", kulczynskiM(A,B));
     console.log("lorentzianM: ", lorentzianM(A,B));
 
     console.log("intersectionM: ", intersectionM(A,B));
@@ -800,7 +824,7 @@ function testvecmesure(){
     console.log("hassanatM: ",  hassanatM(A,B));
 
     console.log("motykaM: ", motykaM(A,B));
-    console.log("kulczynskisM: ", kulczynskisM(A,B));
+    //console.log("kulczynskisM: ", kulczynskisM(A,B));
     console.log("ruzickaM: ", ruzickaM(A,B));
     console.log("tanimotoM: ", tanimotoM(A,B));
 
