@@ -206,7 +206,7 @@ function wavehedgesM( v1, v2 ){ //wave edges; Edge waves from fluid dynamics ???
     return d;
 }
 
-function hassanatM( v1, v2 ){//https://arxiv.org/pdf/1409.0923.pdf
+function hassanatM( v1, v2 ){ //https://arxiv.org/pdf/1409.0923.pdf
     let l = v1.length; 
     if( l != v2.length ){
         return NaN;
@@ -215,11 +215,13 @@ function hassanatM( v1, v2 ){//https://arxiv.org/pdf/1409.0923.pdf
     for( let i = 0; i < l; i += 1 ){
         let mi = Math.min(v1[i], v2[i]);
         let ma = Math.max(v1[i], v2[i]);
+        let diffab = Math.abs( v1[i] - v2[i]);
         if( mi >= 0 ){
-            d += 1 - ( ( 1 + mi ) / ( 1 + ma ) );
+            d +=  ( ( diffab ) / ( 1 + ma ) );
         } else {
+            
             let mia = Math.abs( mi );
-            d += 1 - ( ( 1 + mi + mia ) / ( 1 + mi + mia ) );    
+            d += ( ( diffab ) / ( 1 + ma + mia ) );    
         }
     }
     return d;
