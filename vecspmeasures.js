@@ -99,6 +99,49 @@ function soerensenM( v1, v2 ){ //also Bray-Curtis
     return a/b;
 }
 
+function normvecM( v1, v2 ){ 
+    let l = v1.length; 
+    if( l != v2.length ){
+        return NaN;
+    }
+	//vektoren normieren
+	let n1 = 0.0;
+	let n2 = 0.0;
+	for( let i = 0; i < l; i += 1 ){
+	    n1 += v1[i]*v1[i];
+	
+	    n2 = v2[i]*v2[i];
+    }
+    n1 = Math.sqrt( n1 );
+    n2 = Math.sqrt( n2 );
+
+
+	
+	//euklidian kombination
+	let normval = 0.0
+    for( let i = 0; i < l; i += 1 ){
+        let tempnor1 = v1[i]/n1;
+        let tempnor2 = v2[i]/n2;
+        let tempdiff = (tempnor1 - tempnor2);
+        normval += (tempdiff*tempdiff);
+    }
+    normval = normval / l;
+    let retval = Math.sqrt(normval)  || 0.0;
+    
+    return parseFloat( retval);
+    /*let normval = 0.0
+    for( let i = 0; i < l; i += 1 ){
+        let tempnor1 = v1[i]/n1;
+        let tempnor2 = v2[i]/n2;
+        let tempdiff = tempnor1 - tempnor2;
+        normval += Math.abs(tempdiff*tempdiff);
+    }
+    normval = normval / l;
+    
+    return parseFloat( normval);
+    */
+}
+
 function gowerM( v1, v2, range ){ //range of values in the row, i.e. same feature; i.e. special case all features have the same potential range
     let l = v1.length; 
     if( l != v2.length ){
@@ -433,9 +476,11 @@ function pearsonchisquaredM( v1, v2 ){
     }
     let d = 0.0;
     for(let i = 0; i < l; i += 1 ){
-        let z = v1[i]-v2[i];
-        d += (z * z) / v2[i];
-        
+        if(v2[i] != 0){
+            let z = v1[i]-v2[i];
+            
+            d += (z * z) / v2[i];
+        }
     }
     return  d;
 }
@@ -490,8 +535,10 @@ function clarckM( v1, v2 ){
     }
     let d = 0.0;
     for( let i = 0; i < l; i += 1 ){
-        let z = Math.abs(v1[i] - v2[i]) / (v1[i] + v2[i]);
-        d += z * z;
+        if( v1[i] != 0 && v2[i] != 0 ){
+            let z = Math.abs(v1[i] - v2[i]) / (v1[i] + v2[i]);
+            d += z * z ;
+        }
     }
     return  Math.sqrt( d );
 }
@@ -503,9 +550,11 @@ function additivesymmetricchisquaredM( v1, v2 ){
     }
     let d = 0.0;
     for( let i = 0; i < l; i += 1 ){
-        let z = v1[i] - v2[i];
-        let y = v1[i]+v2[i];
-        d += ( (z * z) * y ) / (v1[i] * v2[i]);       
+        if( v1[i] != 0 && v2[i] != 0 ){
+            let z = v1[i] - v2[i];
+            let y = v1[i]+v2[i];
+            d += ( (z * z) * y ) / (v1[i] * v2[i]);  
+        }     
     }
     return  d;
 }
@@ -518,7 +567,9 @@ function kullbackleiblerM( v1, v2 ){
     }
     let d = 0.0;
     for( let i = 0; i < l; i += 1 ){
-        d += v1[i] * Math.log( v1[i] / v2[i] ); 
+        if( v1[i] != 0 && v2[i] != 0 ){
+            d += v1[i] * Math.log( v1[i] / v2[i] ); 
+        }
     }
     return  d;
 }
@@ -530,8 +581,11 @@ function JeffreysM( v1, v2 ){
     }
     let d = 0.0;
     for( let i = 0; i < l; i += 1 ){
-        d += (v1[i] - v2[i]) * Math.log( v1[i] / v2[i] ); 
+        if( v1[i] != 0 && v2[i] != 0 ){
+            d += ((v1[i] - v2[i]) * Math.log( v1[i] / v2[i] )  );
+        } 
     }
+    
     return  d;
 }
 
@@ -542,7 +596,10 @@ function kullbackdivergenceM( v1, v2 ){
     }
     let d = 0.0;
     for( let i = 0; i < l; i += 1 ){
-        d += v1[i] * Math.log( (2*v1[i]) / (v1[i]+v2[i]) ); 
+        if( v1[i] != 0 && v2[i] != 0 ){
+            
+            d += v1[i] * Math.log( (2*v1[i]) / (v1[i]+v2[i]) ); 
+        }
     }
     return  d;
 }
@@ -554,7 +611,9 @@ function topsoeeM( v1, v2 ){
     }
     let d = 0.0;
     for( let i = 0; i < l; i += 1 ){
-        d += (v1[i] * Math.log( (2*v1[i]) / (v1[i]+v2[i]) )) + (v2[i] * Math.log( (2*v2[i]) / (v1[i]+v2[i]) )); 
+        if( v1[i] != 0 && v2[i] != 0 ){
+            d += (v1[i] * Math.log( (2*v1[i]) / (v1[i]+v2[i]) )) + (v2[i] * Math.log( (2*v2[i]) / (v1[i]+v2[i]) )); 
+        }
     }
     return  d;
 }
@@ -570,7 +629,7 @@ function jensenshannonM( v1, v2 ){
         a += (v1[i] * Math.log( (2*v1[i]) / (v1[i]+v2[i]) ));
         b += (v2[i] * Math.log( (2*v2[i]) / (v1[i]+v2[i]) )); 
     }
-    return  0.5*(a+b);
+    return  (0.5*(a+b) )  || 0.0;
 }
 
 function jensenM( v1, v2 ){
@@ -583,7 +642,7 @@ function jensenM( v1, v2 ){
         let z = ((v1[i]+v2[i])/2);
         d += (((( v1[i] * Math.log(v1[i]) ) + ( v2[i] * Math.log(v2[i]) ) ) / 2 ) - (z*Math.log(z)) );
     }
-    return  d;
+    return  d  || 0.0;
 }
 
 /* stylo specific measures*/
@@ -816,6 +875,7 @@ function testvecmesure(){
 
     console.log("canberraM: ", canberraM(A,B));
     console.log("soerensenM: ", soerensenM(A,B));
+    console.log("normvecM: ", normvecM( A, B ), normvecM( B, A ));
     console.log("gowerM: ", gowerM(A,B, 100.0));
     console.log("soergelM: ", soergelM(A,B));
     //console.log("kulczynskiM: ", kulczynskiM(A,B));
