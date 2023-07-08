@@ -36,7 +36,11 @@ function chebyshevM( v1, v2 ){
     for(let i = 0; i < l; i += 1 ){
         da.push( Math.abs( v1[i] - v2[i] ) );
     }
-    return Math.max( ...da );
+    return  Math.max( ...da );
+}
+
+function chebyaddinterseczM( v1, v2 ){
+    return chebyshevM( v1, v2 )+(intersectionZMN(v1, v2)*255); //250 ????
 }
 
 function minkowskiM( v1, v2, order ){
@@ -231,8 +235,33 @@ function intersectionZM( v1, v2 ){
         sv1 += v1[i];
         sv2 += v2[i];
     }
-    
+     
     return (1-(d/Math.min(sv1, sv2)));
+}
+
+function intersectionZMN( v1, v2 ){
+    let l = v1.length; 
+    if( l != v2.length ){
+        return NaN;
+    }
+    let d = 1.0;
+    let sv1 = 1.0;
+    let sv2 = 1.0;
+    let D = 1.0;
+    for( let i = 0; i < l; i += 1 ){
+        d += Math.min(v1[i], v2[i]);
+        sv1 += v1[i];
+        sv2 += v2[i];
+        D += Math.max(v1[i], v2[i]);
+    }
+    if(D == 0.0){
+        D = 1.0;
+    }
+    let minofsv = Math.min(sv1, sv2);
+    if(minofsv == 0.0 ){
+        minofsv = 1;
+    }
+    return (1-(d/minofsv))*D*0.001;
 }
 
 function wavehedgesM( v1, v2 ){ //wave edges; Edge waves from fluid dynamics ??? - introduced by Chan 2007 very bad, no sources but many modern replications
@@ -242,10 +271,15 @@ function wavehedgesM( v1, v2 ){ //wave edges; Edge waves from fluid dynamics ???
     }
     let d = 0.0;
     for( let i = 0; i < l; i += 1 ){
-        d += Math.abs(v1[i]  - v2[i])/Math.max(v1[i], v2[i]); 
+        //console.log(d, Math.abs(v1[i]  - v2[i]), Math.max(v1[i], v2[i]), Math.abs(v1[i]  - v2[i])/Math.max(v1[i], v2[i]));
+        const u = Math.max( v1[i], v2[i] );
+        if( 0 != u ){ //get zero values not wrong 
+            d += Math.abs(v1[i]  - v2[i]) / u; 
+        }
         //changed acording to: https://arxiv.org/pdf/1409.0923.pdf Hassant
         //d += 1-( ( 1 + mi ) / ( 1 + ma ) );
     }
+    //console.log(d);
     return d;
 }
 
@@ -351,7 +385,10 @@ function harmonicmeanM( v1, v2 ){
     }
     let d = 0.0;
     for( let i = 0; i < l; i += 1 ){
-        d += (v1[i] * v2[i]) / (v1[i] + v2[i]);
+        const u = (v1[i] + v2[i])
+        if( u != 0 ){
+            d += (v1[i] * v2[i]) / u;
+        }
     }
     return d*2;
     
@@ -438,13 +475,19 @@ function fidelityM( v1, v2 ){ //sum of geometric means
 }
 
 function bhattacarya1M( v1, v2 ){ 
-    let z = Math.acos( 1/fidelityM( v1, v2 ) );//for values greater than 1
+    const zwierg = fidelityM( v1, v2 );
+    let z = 0;
+    if( zwierg > 1.0 ){
+        z = Math.acos( 1/zwierg );//for values greater than 1
+    } else {
+        z = Math.acos( zwierg );
+    }
     return  z*z;
 }
 
 function bhattacarya2M( v1, v2 ){
     //return  -1*Math.log( fidelityM( v1, v2 ) );
-    return  Math.log( fidelityM( v1, v2 ) ); //for values greater that 1
+    return  Math.abs( Math.log( fidelityM( v1, v2 ) ) ); //for values greater that 1
 }
 
 function hellingerM( v1, v2 ){
@@ -493,7 +536,9 @@ function neymanchisquaredM( v1, v2 ){
     let d = 0.0;
     for(let i = 0; i < l; i += 1 ){
         let z = v1[i]-v2[i];
-        d += (z * z) / v1[i];
+        if( z != 0 && v1[i] != 0 ){
+            d += (z * z) / v1[i];
+        }
         
     }
     return  d;
@@ -507,7 +552,10 @@ function squaredchisquaredM( v1, v2 ){
     let d = 0.0;
     for(let i = 0; i < l; i += 1 ){
         let z = v1[i] - v2[i];
-        d += (z * z) / (v1[i]+v2[i]);
+        let y = (v1[i]+v2[i]);
+        if( z != 0 && y != 0 ){
+            d += (z * z) / y;
+        }
         
     }
     return  d;
@@ -626,8 +674,10 @@ function jensenshannonM( v1, v2 ){
     let a = 0.0;
     let b = 0.0;
     for( let i = 0; i < l; i += 1 ){
-        a += (v1[i] * Math.log( (2*v1[i]) / (v1[i]+v2[i]) ));
-        b += (v2[i] * Math.log( (2*v2[i]) / (v1[i]+v2[i]) )); 
+        if( v1[i] != 0.0 && v2[i] != 0.0 ){
+            a += (v1[i] * Math.log( (2*v1[i]) / (v1[i]+v2[i]) ));
+            b += (v2[i] * Math.log( (2*v2[i]) / (v1[i]+v2[i]) )); 
+        }
     }
     return  (0.5*(a+b) )  || 0.0;
 }
@@ -639,8 +689,12 @@ function jensenM( v1, v2 ){
     }
     let d = 0.0;
     for( let i = 0; i < l; i += 1 ){
+        if( v1[i] != 0.0 && v2[i] != 0.0 ){
         let z = ((v1[i]+v2[i])/2);
-        d += (((( v1[i] * Math.log(v1[i]) ) + ( v2[i] * Math.log(v2[i]) ) ) / 2 ) - (z*Math.log(z)) );
+            //console.log(z, v1[i], Math.log(v1[i]), v2[i],  Math.log(v2[i]), z*Math.log(z))
+            d += (((( v1[i] * Math.log(v1[i]) ) + ( v2[i] * Math.log(v2[i]) ) ) / 2 ) - (z*Math.log(z)) );
+        //console.log(d);
+        } 
     }
     return  d  || 0.0;
 }
@@ -692,10 +746,10 @@ function burrowsdeltaM( v1, v2, sta ){
     if( l != v2.length ){
         return NaN;
     }
-    
+    //console.log(sta);
     let d = 0.0;
     for( let i = 0; i < l; i += 1 ){
-        d += Math.abs(  v1[i] - v2[i] ) / sta[i] ; 
+        d += Math.abs(  v1[i] - v2[i] ) / (sta[i]+1) ; 
     }
     //d /= l;
     return d;
@@ -709,7 +763,7 @@ function argamonlineardeltaM( v1, v2, sta ){
     let d = 0.0;
     for( let i = 0; i < l; i += 1 ){
         let t = v1[i] - v2[i];
-        d += Math.sqrt( Math.abs( ( t * t ) / sta[i] ) ); 
+        d += Math.sqrt( Math.abs( ( t * t ) / (sta[i]+1) ) ); 
         
     }
     d /= l;
@@ -723,7 +777,7 @@ function edersdeltaM( v1, v2, sta ){
     }
     let d = 0.0;
     for( let i = 0; i < l; i += 1 ){
-        d +=  Math.abs( ( v1[i] - v2[i] ) / sta[i] ) * ( ( ( l - i ) + 1 ) / l ); 
+        d +=  Math.abs( ( v1[i] - v2[i] ) / (sta[i]+1) ) * ( ( ( l - i ) + 1 ) / l ); 
         
     }
     //d /= l;
@@ -738,7 +792,7 @@ function argamonsquadraticdeltaM( v1, v2, sta ){
     let d = 0.0;
     for( let i = 0; i < l; i += 1 ){
         let t = v1[i] - v2[i];
-        d += ( t * t ) * (1 / sta[i] ) ; 
+        d += ( t * t ) * (1 / (sta[i]+1) ) ; 
     }
     d /= l;
     return d;
@@ -848,16 +902,23 @@ function testmeasagainstAmeasure( m1, ms, ms2, a1, bs ){
     for( let m = 0; m < ms.length; m += 1 ){
         let rrr = [];
         for( let b = 0; b < bs.length; b += 1 ){
-            //rrr.push(  diffs1[b] - ms[m]( a1,bs[b] )   );
-            rrr.push(  ms[m]( a1,bs[b] ) / diffs1[b]    );
+            //const er =  Math.abs(diffs1[b] - ms[m]( a1,bs[b] ) );
+            //const er = (ms[m]( a1,bs[b] ) / diffs1[b]);
+            const er = (diffs1[b] / ms[m]( a1,bs[b] ) );
+            rrr.push(  er    );
         }
         resultingdiffs.push( rrr );
     }
     for( let m = 0; m < ms2.length; m += 1 ){
         let rrr = [];
         for( let b = 0; b < bs.length; b += 1 ){
-            //rrr.push( diffs1[b] - ms2[m]( a1,bs[b], stdif )   );
-            rrr.push( ms2[m]( a1,bs[b], stdif )  / diffs1[b]   );
+            //const er = Math.abs(diffs1[b] - ms2[m]( a1,bs[b], stdif ));
+            //const er = (ms2[m]( a1,bs[b], stdif )  / diffs1[b]);
+            const er = ( diffs1[b] / ms2[m]( a1,bs[b], stdif ) );
+            /*if(!er){
+                console.log( stdif, ms2[m]( a1,bs[b], stdif ), diffs1[b] );
+            }*/
+            rrr.push( er   );
         }
         resultingdiffs.push( rrr );
     }
@@ -927,4 +988,53 @@ function testvecmesure(){
 
     
 }
+
 testvecmesure();
+
+
+const dmeasuredict = {};
+dmeasuredict["euclideanM"] = euclideanM;
+dmeasuredict["chebyshevM"] = chebyshevM;
+dmeasuredict["minkowskiM"] =  minkowskiM;
+dmeasuredict["manhattenM"] =  manhattenM;
+dmeasuredict["canberraM"] = canberraM;
+dmeasuredict["soerensenM"] = soerensenM;
+dmeasuredict["normvecM"] = normvecM;
+dmeasuredict["gowerM"] = gowerM;
+dmeasuredict["soergelM"] = soergelM;
+dmeasuredict["lorentzianM"] = lorentzianM;
+dmeasuredict["intersectionM"] = intersectionM;
+dmeasuredict["wavehedgesM"] = wavehedgesM;
+dmeasuredict["hassanatM"] = hassanatM;
+dmeasuredict["motykaM"] = motykaM;
+dmeasuredict["ruzickaM"] = ruzickaM;
+dmeasuredict["tanimotoM"] = tanimotoM;
+dmeasuredict["innerproductM"] = innerproductM;
+dmeasuredict["harmonicmeanM"] = harmonicmeanM;
+dmeasuredict["cosineM"] = cosineM;
+dmeasuredict["kumarhassebrookM"] = kumarhassebrookM;
+dmeasuredict["diceM"] = diceM;
+dmeasuredict["fidelityM"] = fidelityM;
+dmeasuredict["bhattacarya1M"] = bhattacarya1M;
+dmeasuredict["bhattacarya2M"] = bhattacarya2M;
+dmeasuredict["hellingerM"] = hellingerM;
+dmeasuredict["jensenM"] = jensenM;
+dmeasuredict["jensenshannonM"] = jensenshannonM;
+dmeasuredict["topsoeeM"] = topsoeeM;
+dmeasuredict["kullbackdivergenceM"] = kullbackdivergenceM;
+dmeasuredict["JeffreysM"] = JeffreysM;
+dmeasuredict["kullbackleiblerM"] = kullbackleiblerM;
+dmeasuredict["squaredeuclideanM"] = squaredeuclideanM;
+dmeasuredict["pearsonchisquaredM"] = pearsonchisquaredM;
+dmeasuredict["neymanchisquaredM"] = neymanchisquaredM;
+dmeasuredict["squaredchisquaredM"] = squaredchisquaredM;
+dmeasuredict["divergenceM"] = divergenceM;
+dmeasuredict["clarckM"] = clarckM;      
+dmeasuredict["additivesymmetricchisquaredM"] = additivesymmetricchisquaredM; 
+dmeasuredict["edersimpleM"] = edersimpleM;
+dmeasuredict["burrowsdeltaM"] = burrowsdeltaM;
+dmeasuredict["argamonlineardeltaM"] = argamonlineardeltaM;
+dmeasuredict["edersdeltaM"] = edersdeltaM;      
+dmeasuredict["argamonsquadraticdeltaM"] = argamonsquadraticdeltaM; 
+dmeasuredict["wasserst1dM"] = wasserst1dM;
+
