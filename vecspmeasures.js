@@ -58,7 +58,7 @@ function minkowskiM( v1, v2, order ){
     return Math.pow( d, (1.0/order) );
 }
 
-function manhattenM( v1, v2 ){ //also city block distance, rectilinear distance, taxicab norm
+function manhattanM( v1, v2 ){ //also city block distance, rectilinear distance, taxicab norm
     let d = 0.0;
     let l = v1.length; 
     if( l != v2.length ){
@@ -400,18 +400,20 @@ function cosineM( v1, v2 ){
     if( l != v2.length ){
         return NaN;
     }
+    
     let n1 = 0.0;
     let n2 = 0.0;
     let pu = 0.0;
     for(let i = 0; i < l; i += 1 ){
-        n1 += v1[i]*v1[i];
-        n2 += v2[i]*v2[i];
-        pu += v1[i]*v2[i];
+        n1 += (v1[i]+1)*(v1[i]+1);
+        n2 += (v2[i]+1)*(v2[i]+1);
+        pu += (v1[i]+1)*(v2[i]+1);
     }
     n1 = Math.sqrt(n1);
     n2 = Math.sqrt(n2);
     let re =  1.0 - (pu / (n1*n2)); 
-    if(!re){ // that means therer is a NaN input 
+    if(!re){ // that means therer is a NaN input or a zero vector
+        //console.log("NaN", v1, v2);
         re = 0.0;
     }
     return  re;
@@ -675,7 +677,7 @@ function jensenshannonM( v1, v2 ){
     let b = 0.0;
     for( let i = 0; i < l; i += 1 ){
         if( v1[i] != 0.0 && v2[i] != 0.0 ){
-            a += (v1[i] * Math.log( (2*v1[i]) / (v1[i]+v2[i]) ));
+            a += (v1[i] * Math.log( (2*v1[i]) / (v1[i]+v2[i]) )); //(v1[i]+v2[i]) - mixture maybe expressed as: (v1[i]+v2[i])/2
             b += (v2[i] * Math.log( (2*v2[i]) / (v1[i]+v2[i]) )); 
         }
     }
@@ -699,8 +701,8 @@ function jensenM( v1, v2 ){
     return  d  || 0.0;
 }
 
-/* stylo specific measures*/
-function stdabw( VV ){
+/* stylo specific measures*/ 
+function stdabw( VV ){ 
     let ll = VV.length; //anzahl der vectoren
     let l = VV[0].length;//anzahl der wörter pro vector
     let means = [];
@@ -718,11 +720,11 @@ function stdabw( VV ){
 
     for( let i = 0; i < l; i += 1 ){//ech word form
         for( let j = 0; j < ll; j += 1 ){//each frequency value
-            stdabws[i] += Math.abs( means[i] - VV[j][i]);
+            stdabws[i] += ( means[i] - VV[j][i] ) * ( means[i] - VV[j][i] );
         }
-        stdabws[i] = stdabws[i] / ll;
+        stdabws[i] = Math.sqrt( stdabws[i] / ll );
     }
-    return stdabws;
+    return [stdabws, means];
 }
 
 
@@ -738,10 +740,10 @@ function edersimpleM( v1, v2 ){
         v11.push( Math.sqrt( v1[i] ) );
         v22.push( Math.sqrt( v2[i] ) );
     }
-    return manhattenM( v11, v22 );
+    return manhattanM( v11, v22 );
 }
 
-function burrowsdeltaM( v1, v2, sta ){
+function burrowsdeltaM( v1, v2, stami ){
     let l = v1.length; 
     if( l != v2.length ){
         return NaN;
@@ -749,13 +751,29 @@ function burrowsdeltaM( v1, v2, sta ){
     //console.log(sta);
     let d = 0.0;
     for( let i = 0; i < l; i += 1 ){
-        d += Math.abs(  v1[i] - v2[i] ) / (sta[i]+1) ; 
+        //d += Math.abs(  v1[i] - v2[i] ) / (stami[1][i]+1) ; 
+        d += Math.abs( ( ( v1[i] - stami[1][i] ) / ( stami[0][i] + 1 ) ) - ( ( v2[i] - stami[1][i] ) / ( stami[0][i] + 1 ) ) );
     }
     //d /= l;
     return d;
 }
 
-function argamonlineardeltaM( v1, v2, sta ){ 
+function burrowsdeltaFastM( v1, v2, stami ){
+    let l = v1.length; 
+    if( l != v2.length ){
+        return NaN;
+    }
+    //console.log(sta);
+    let d = 0.0;
+    for( let i = 0; i < l; i += 1 ){
+        d += Math.abs(  v1[i] - v2[i] ) / (stami[0][i]+1) ; 
+        //d += Math.abs( ( ( v1[i] - stami[1][i] ) / ( stami[0][i] + 1 ) ) - ( ( v2[i] - stami[1][i] ) / ( stami[0][i] + 1 ) ) );
+    }
+    d /= l;
+    return d;
+}
+
+function argamonlineardeltaM( v1, v2, stami ){ //check definition 
     let l = v1.length; 
     if( l != v2.length ){
         return NaN;
@@ -763,28 +781,44 @@ function argamonlineardeltaM( v1, v2, sta ){
     let d = 0.0;
     for( let i = 0; i < l; i += 1 ){
         let t = v1[i] - v2[i];
-        d += Math.sqrt( Math.abs( ( t * t ) / (sta[i]+1) ) ); 
+        d += Math.sqrt( ( t * t ) / (stami[1][i]+1) ); 
         
     }
     d /= l;
     return d;
 }
 
-function edersdeltaM( v1, v2, sta ){ 
+function edersdeltaM( v1, v2, stami ){ 
     let l = v1.length; 
     if( l != v2.length ){
         return NaN;
     }
     let d = 0.0;
     for( let i = 0; i < l; i += 1 ){
-        d +=  Math.abs( ( v1[i] - v2[i] ) / (sta[i]+1) ) * ( ( ( l - i ) + 1 ) / l ); 
-        
+        const rankscalar = ( ( ( l - i ) + 1 ) / l );
+        //d +=  Math.abs( ( v1[i] - v2[i] ) / (stami[i]+1) ) * ( ( ( l - i ) + 1 ) / l ); 
+        d += Math.abs( ( ( v1[i] - stami[1][i] ) / ( stami[0][i] + 1 ) * rankscalar ) - ( ( v2[i] - stami[1][i] ) / ( stami[0][i] + 1 ) * rankscalar ) );
     }
     //d /= l;
     return d;
 }
 
-function argamonsquadraticdeltaM( v1, v2, sta ){ 
+function edersdeltaFastM( v1, v2, stami ){ 
+    let l = v1.length; 
+    if( l != v2.length ){
+        return NaN;
+    }
+    let d = 0.0;
+    for( let i = 0; i < l; i += 1 ){
+        //const rankscalar = ( ( ( l - i ) + 1 ) / l );
+        d +=  Math.abs( ( v1[i] - v2[i] ) / (stami[0][i]+1) ) * ( ( ( l - i ) + 1 ) / l ); 
+        //d += Math.abs( ( ( v1[i] - stami[1][i] ) / ( stami[0][i] + 1 ) * rankscalar ) - ( ( v2[i] - stami[1][i] ) / ( stami[0][i] + 1 ) * rankscalar ) );
+    }
+    d /= l;
+    return d;
+}
+
+function argamonsquadraticdeltaM( v1, v2, stami ){ 
     let l = v1.length; 
     if( l != v2.length ){
         return NaN;
@@ -792,7 +826,7 @@ function argamonsquadraticdeltaM( v1, v2, sta ){
     let d = 0.0;
     for( let i = 0; i < l; i += 1 ){
         let t = v1[i] - v2[i];
-        d += ( t * t ) * (1 / (sta[i]+1) ) ; 
+        d += ( t * t ) / (stami[0][i]+1) ; 
     }
     d /= l;
     return d;
@@ -897,15 +931,29 @@ function testmeasagainstAmeasure( m1, ms, ms2, a1, bs ){
     let stdif = stdabw( bs );
     //console.log("Standadabweichung:", stdif);
     for( let b = 0; b < bs.length; b += 1 ){
-        diffs1.push( m1(a1, bs[b]) );
+        const fktname = m1.name; 
+        if( fktname != "minkowskiM" && 
+            fktname != "burrowsdeltaM" && 
+            fktname != "argamonlineardeltaM" && 
+            fktname != "edersdeltaM" && 
+            fktname != "argamonsquadraticdeltaM" &&
+            fktname != "wasserst1dM" &&
+            fktname != "gowerM" &&
+            fktname != "edersdeltaFastM" &&
+            fktname != "burrowsdeltaFastM"){
+                diffs1.push( m1(a1, bs[b]) );
+            } else {
+                diffs1.push( m1(a1, bs[b], stdif ) );
+            }
     }
     for( let m = 0; m < ms.length; m += 1 ){
         let rrr = [];
         for( let b = 0; b < bs.length; b += 1 ){
             //const er =  Math.abs(diffs1[b] - ms[m]( a1,bs[b] ) );
             //const er = (ms[m]( a1,bs[b] ) / diffs1[b]);
-            const er = (diffs1[b] / ms[m]( a1,bs[b] ) );
-            rrr.push(  er    );
+            
+            const er = Math.abs(diffs1[b] - ms[m]( a1,bs[b] ) );
+            rrr.push( er );
         }
         resultingdiffs.push( rrr );
     }
@@ -914,11 +962,11 @@ function testmeasagainstAmeasure( m1, ms, ms2, a1, bs ){
         for( let b = 0; b < bs.length; b += 1 ){
             //const er = Math.abs(diffs1[b] - ms2[m]( a1,bs[b], stdif ));
             //const er = (ms2[m]( a1,bs[b], stdif )  / diffs1[b]);
-            const er = ( diffs1[b] / ms2[m]( a1,bs[b], stdif ) );
+            const er = Math.abs( diffs1[b] - ms2[m]( a1,bs[b], stdif ) );
             /*if(!er){
                 console.log( stdif, ms2[m]( a1,bs[b], stdif ), diffs1[b] );
             }*/
-            rrr.push( er   );
+            rrr.push( er );
         }
         resultingdiffs.push( rrr );
     }
@@ -931,7 +979,7 @@ function testvecmesure(){
     console.log("euclideanM: ", euclideanM(A,B));
     console.log("chebyshevM: ", chebyshevM(A,B));
     console.log("minkowskiM 0.5: ", minkowskiM(A,B, 0.5));
-    console.log("manhattenM: ", manhattenM(A,B));
+    console.log("manhattanM: ", manhattanM(A,B));
     
 
     console.log("canberraM: ", canberraM(A,B));
@@ -989,14 +1037,14 @@ function testvecmesure(){
     
 }
 
-testvecmesure();
+//testvecmesure();
 
 
 const dmeasuredict = {};
 dmeasuredict["euclideanM"] = euclideanM;
 dmeasuredict["chebyshevM"] = chebyshevM;
 dmeasuredict["minkowskiM"] =  minkowskiM;
-dmeasuredict["manhattenM"] =  manhattenM;
+dmeasuredict["manhattanM"] =  manhattanM;
 dmeasuredict["canberraM"] = canberraM;
 dmeasuredict["soerensenM"] = soerensenM;
 dmeasuredict["normvecM"] = normvecM;
