@@ -9,15 +9,32 @@
 /* !equal size of vector v1 and v2! */
 
 /* pythangoraeic difference */
+let nOnZerO = false;
+
 function euclideanM( v1, v2 ){
     let d = 0.0;
     let l = v1.length; 
     if( l != v2.length ){
         return NaN;
     }
-    for(let i = 0; i < l; i += 1 ){
-        let z = v1[i] - v2[i];
-        d += z*z;
+    if( nOnZerO ){
+        for(let i = 0; i < l; i += 1 ){
+            let g = v1[i];
+            let f = v2[i];
+            
+            if( f == 0 || g == 0 ){
+                g = randn(0.0, 1e-3);
+                f = randn(0.0, 1e-3);
+            }
+            //const z = v1[i] - v2[i];
+            const z = g - f;
+            d += z*z;
+        }
+    } else {
+        for(let i = 0; i < l; i += 1 ){
+            const z = v1[i] - v2[i];
+            d += z*z;
+        }
     }
     return Math.sqrt( d );
 
@@ -727,6 +744,55 @@ function stdabw( VV ){
     return [stdabws, means];
 }
 
+function makerang( allt ){ //rang citeria is equal number, if you whant rang to be a range ...; stylo ah online
+    let returnrang = {};
+    for( let te in allt ){
+    
+        let rangi = [];
+        let old = allt[ te ][1][0];
+        let rang = 1;
+        for( let index in allt[ te ][ 1 ] ){ //[tokenarray, freqarray]
+            if( old != allt[ te ][ 1 ][ index ] ){
+                rang += 1;
+                old = allt[ te ][ 1 ][ index ];
+            }
+            rangi.push( rang );
+        }
+        returnrang[ te ] = rangi;
+    }
+    //console.log( returnrang );
+    return returnrang;
+}
+
+function rangfrommatrix( a ){ //each text, each token, sorted decending or acending, not suitabe for unsorted vector
+    let returnrang = [];
+    
+    for( let t in a ){
+        let b = a[t].slice(0);
+        let doinverse = false;
+        if( b[1] < b[0] ){
+            b.reverse();
+            doinverse = true;
+        }
+        let rangi = [];
+        let old = b[ 0 ];
+        let rang = 1
+        
+        for( let tt in b ){
+            if( old != b[ tt ] ){
+                rang += 1;
+                old = b[ tt ];
+            }
+            rangi.push( rang );
+        }
+        if( doinverse ){
+            rangi.reverse();
+        }
+        returnrang.push( rangi );
+    }
+    
+    return returnrang;
+}
 
 function edersimpleM( v1, v2 ){
     
@@ -788,32 +854,37 @@ function argamonlineardeltaM( v1, v2, stami ){ //check definition
     return d;
 }
 
-function edersdeltaM( v1, v2, stami ){ 
+function edersdeltaM( v1, v2, stami, rangv1, rangv2 ){ 
     let l = v1.length; 
     if( l != v2.length ){
         return NaN;
     }
     let d = 0.0;
+    //console.log(l, rangv1,rangv2)
     for( let i = 0; i < l; i += 1 ){
-        const rankscalar = ( ( ( l - i ) + 1 ) / l );
+        //const rankscalar = ( ( ( l - i ) + 1 ) / l ); //der rang ist hier falsch berechnet
         //d +=  Math.abs( ( v1[i] - v2[i] ) / (stami[i]+1) ) * ( ( ( l - i ) + 1 ) / l ); 
-        d += Math.abs( ( ( v1[i] - stami[1][i] ) / ( stami[0][i] + 1 ) * rankscalar ) - ( ( v2[i] - stami[1][i] ) / ( stami[0][i] + 1 ) * rankscalar ) );
+        d += Math.abs( ( ( Math.abs( v1[i] - stami[1][i] ) / ( stami[0][i] + 1 ) ) * (1/rangv1[i]) ) - ( ( Math.abs( v2[i] - stami[1][i] ) / ( stami[0][i] + 1 ) ) * (1/rangv2[i]) ) );
     }
     //d /= l;
     return d;
 }
 
-function edersdeltaFastM( v1, v2, stami ){ 
+function edersdeltaNeuM( v1, v2, stami ){ //that is a normalized manhattan, diff as fraction of size of frequnecies (reduce potential big influence of big frequncies), naming is done according to the subject in which context idea was born
     let l = v1.length; 
     if( l != v2.length ){
         return NaN;
     }
     let d = 0.0;
     for( let i = 0; i < l; i += 1 ){
-        //const rankscalar = ( ( ( l - i ) + 1 ) / l );
-        d +=  Math.abs( ( v1[i] - v2[i] ) / (stami[0][i]+1) ) * ( ( ( l - i ) + 1 ) / l ); 
-        //d += Math.abs( ( ( v1[i] - stami[1][i] ) / ( stami[0][i] + 1 ) * rankscalar ) - ( ( v2[i] - stami[1][i] ) / ( stami[0][i] + 1 ) * rankscalar ) );
+        //d +=  Math.abs( ( v1[i] - v2[i] ) / (stami[1][i]+1) ); //als Bruchteil auf den globalen Häufigkeitswert
+        let zwe = Math.abs( v1[i] - v2[i] ) / ( ( v1[i] + v2[i] ) / 2 );
+        if( isNaN( zwe ) ){ //inp all 0
+            zwe = 0;
+        }
+        d +=  zwe; //als Bruchteil auf den Häufigkeitswert des paares
     }
+    //console.log(d)
     d /= l;
     return d;
 }
@@ -1082,7 +1153,8 @@ dmeasuredict["additivesymmetricchisquaredM"] = additivesymmetricchisquaredM;
 dmeasuredict["edersimpleM"] = edersimpleM;
 dmeasuredict["burrowsdeltaM"] = burrowsdeltaM;
 dmeasuredict["argamonlineardeltaM"] = argamonlineardeltaM;
-dmeasuredict["edersdeltaM"] = edersdeltaM;      
+dmeasuredict["edersdeltaM"] = edersdeltaM; 
+dmeasuredict["edersdeltaNeuM"] = edersdeltaNeuM;      
 dmeasuredict["argamonsquadraticdeltaM"] = argamonsquadraticdeltaM; 
 dmeasuredict["wasserst1dM"] = wasserst1dM;
 
